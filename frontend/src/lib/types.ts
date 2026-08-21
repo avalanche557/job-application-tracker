@@ -32,6 +32,9 @@ export type JobApplicationDetail = JobApplication & {
 export type User = {
   id: string;
   email: string;
+  name: string | null;
+  phone: string | null;
+  location: string | null;
   createdAt: string;
 };
 

@@ -2,10 +2,14 @@ import type { Response } from "express";
 
 const isProd = process.env.NODE_ENV === "production";
 
+// Frontend and backend are on different domains in production, so cookies
+// must be SameSite=None to be sent on cross-origin fetch requests - which
+// in turn requires Secure. Locally (http, same-origin-ish via Vite proxy-free
+// dev) Lax keeps things simple without needing HTTPS.
 const baseCookieOptions = {
   httpOnly: true,
   secure: isProd,
-  sameSite: "lax" as const,
+  sameSite: (isProd ? "none" : "lax") as "none" | "lax",
 };
 
 export function setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
@@ -15,7 +19,7 @@ export function setAuthCookies(res: Response, accessToken: string, refreshToken:
   });
   res.cookie("refresh_token", refreshToken, {
     ...baseCookieOptions,
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30d
     path: "/auth/refresh",
   });
 }

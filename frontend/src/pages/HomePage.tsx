@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import type { ApplicationStatus, JobApplication } from "../lib/types";
 import { StatusBadge } from "../components/StatusBadge";
@@ -10,19 +10,27 @@ type SortBy = "dateApplied" | "companyName" | "jobTitle" | "status";
 const STATUS_OPTIONS: ApplicationStatus[] = ["APPLIED", "INTERVIEWING", "OFFER", "REJECTED", "GHOSTED"];
 
 export function HomePage() {
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<ApplicationStatus | "">("");
   const [needsReviewOnly, setNeedsReviewOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("dateApplied");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const params = new URLSearchParams();
+  if (debouncedSearch) params.set("q", debouncedSearch);
   if (status) params.set("status", status);
   if (needsReviewOnly) params.set("needsReview", "true");
   params.set("sortBy", sortBy);
   params.set("order", order);
 
   const { data: applications, isLoading, error } = useQuery({
-    queryKey: ["applications", status, needsReviewOnly, sortBy, order],
+    queryKey: ["applications", debouncedSearch, status, needsReviewOnly, sortBy, order],
     queryFn: () => api.get<JobApplication[]>(`/applications?${params.toString()}`),
   });
 
@@ -38,6 +46,14 @@ export function HomePage() {
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-3">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by company…"
+          className="input w-56 py-1.5"
+        />
+
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as ApplicationStatus | "")}

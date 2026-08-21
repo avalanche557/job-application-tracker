@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma.js";
 import type { ApplicationSource, ApplicationStatus } from "../generated/prisma/index.js";
 
 export type ListFilters = {
+  q?: string;
   status?: ApplicationStatus;
   needsReview?: boolean;
   sortBy?: "dateApplied" | "companyName" | "jobTitle" | "status";
@@ -14,6 +15,7 @@ export function listApplications(userId: string, filters: ListFilters) {
       userId,
       status: filters.status,
       needsReview: filters.needsReview,
+      companyName: filters.q ? { contains: filters.q, mode: "insensitive" } : undefined,
     },
     orderBy: { [filters.sortBy ?? "dateApplied"]: filters.order ?? "desc" },
   });

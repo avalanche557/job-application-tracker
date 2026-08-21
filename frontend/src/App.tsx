@@ -8,6 +8,7 @@ import { SignupPage } from "./pages/SignupPage";
 import { HomePage } from "./pages/HomePage";
 import { DetailPage } from "./pages/DetailPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { ProfilePage } from "./pages/ProfilePage";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/applications/:id" element={<DetailPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
               </Route>
             </Route>
           </Routes>

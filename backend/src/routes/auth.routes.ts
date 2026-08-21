@@ -73,15 +73,38 @@ router.post("/logout", (_req, res) => {
   res.status(204).send();
 });
 
+const profileSelect = { id: true, email: true, name: true, phone: true, location: true, createdAt: true } as const;
+
 router.get("/me", requireAuth, async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.userId },
-    select: { id: true, email: true, createdAt: true },
+    select: profileSelect,
   });
   if (!user) {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
+  res.json(user);
+});
+
+const updateProfileSchema = z.object({
+  name: z.string().trim().min(1).max(100).nullable(),
+  phone: z.string().trim().min(1).max(30).nullable(),
+  location: z.string().trim().min(1).max(100).nullable(),
+});
+
+router.patch("/me", requireAuth, async (req, res) => {
+  const parsed = updateProfileSchema.partial().safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0].message });
+    return;
+  }
+
+  const user = await prisma.user.update({
+    where: { id: req.userId },
+    data: parsed.data,
+    select: profileSelect,
+  });
   res.json(user);
 });
 

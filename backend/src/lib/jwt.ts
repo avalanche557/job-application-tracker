@@ -4,7 +4,7 @@ const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET!;
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET!;
 
 const ACCESS_TOKEN_TTL = "15m";
-const REFRESH_TOKEN_TTL = "7d";
+const REFRESH_TOKEN_TTL = "30d";
 
 export type TokenPayload = { sub: string };
 

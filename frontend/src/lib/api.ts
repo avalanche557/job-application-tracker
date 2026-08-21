@@ -8,12 +8,34 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+let refreshPromise: Promise<boolean> | null = null;
+
+// Access tokens are short-lived; the refresh cookie is what keeps a session
+// alive across tabs/restarts. Coalesce concurrent refreshes so a burst of
+// 401s (e.g. several queries firing at once) only triggers one /auth/refresh.
+function refreshAccessToken(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = fetch(`${API_URL}/auth/refresh`, { method: "POST", credentials: "include" })
+      .then((res) => res.ok)
+      .catch(() => false)
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
+async function request<T>(path: string, options: RequestInit = {}, isRetry = false): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     ...options,
   });
+
+  if (res.status === 401 && !isRetry && path !== "/auth/refresh" && path !== "/auth/login") {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) return request<T>(path, options, true);
+  }
 
   if (res.status === 204) {
     return undefined as T;

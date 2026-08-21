@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { Avatar } from "./Avatar";
 
 export function Layout() {
   const { user, logout } = useAuth();
@@ -18,15 +19,6 @@ export function Layout() {
           {user && (
             <nav className="flex items-center gap-6">
               <NavLink
-                to="/"
-                end
-                className={({ isActive }) =>
-                  `font-mono text-[13px] transition-colors ${isActive ? "text-ink" : "text-ink-soft hover:text-ink"}`
-                }
-              >
-                Applications
-              </NavLink>
-              <NavLink
                 to="/settings"
                 className={({ isActive }) =>
                   `font-mono text-[13px] transition-colors ${isActive ? "text-ink" : "text-ink-soft hover:text-ink"}`
@@ -34,7 +26,13 @@ export function Layout() {
               >
                 Settings
               </NavLink>
-              <span className="hidden font-mono text-[12px] text-ink-soft sm:inline">{user.email}</span>
+              <NavLink
+                to="/profile"
+                title={user.name || user.email}
+                className={({ isActive }) => `rounded-full transition-opacity ${isActive ? "" : "opacity-90 hover:opacity-100"}`}
+              >
+                <Avatar user={user} size="sm" />
+              </NavLink>
               <button
                 onClick={async () => {
                   await logout();

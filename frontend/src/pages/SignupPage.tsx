@@ -1,18 +1,23 @@
 import { useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { PasswordInput } from "../components/PasswordInput";
 
 export function SignupPage() {
   const { user, signup, signupError } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   if (user) return <Navigate to="/" replace />;
 
+  const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword;
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (password !== confirmPassword) return;
     setSubmitting(true);
     try {
       await signup({ email, password });
@@ -60,18 +65,31 @@ export function SignupPage() {
           <label className="label" htmlFor="password">
             Password
           </label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             required
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="input"
           />
           <p className="mt-1.5 font-mono text-[11px] text-ink-soft">At least 8 characters</p>
         </div>
-        <button type="submit" disabled={submitting} className="btn btn-primary w-full">
+        <div>
+          <label className="label" htmlFor="confirmPassword">
+            Confirm password
+          </label>
+          <PasswordInput
+            id="confirmPassword"
+            required
+            minLength={8}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+          {passwordsMismatch && (
+            <p className="mt-1.5 font-mono text-[11px] text-rust-ink">Passwords don't match</p>
+          )}
+        </div>
+        <button type="submit" disabled={submitting || passwordsMismatch} className="btn btn-primary w-full">
           {submitting ? "Creating account…" : "Sign up"}
         </button>
         <p className="text-center text-sm text-ink-soft">

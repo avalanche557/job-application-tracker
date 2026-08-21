@@ -14,6 +14,7 @@ router.use(requireAuth);
 const statusEnum = z.enum(["APPLIED", "INTERVIEWING", "OFFER", "REJECTED", "GHOSTED"]);
 
 const listQuerySchema = z.object({
+  q: z.string().min(1).optional(),
   status: statusEnum.optional(),
   needsReview: z
     .enum(["true", "false"])
