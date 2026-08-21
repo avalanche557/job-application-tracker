@@ -1,4 +1,8 @@
-export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+const rawApiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+// Strip a trailing slash so "/" (a same-origin proxy setup) doesn't combine
+// with a request path's leading slash into a protocol-relative "//auth/me",
+// which browsers resolve as https://auth/me instead of a local path.
+export const API_URL = rawApiUrl.replace(/\/$/, "");
 
 export class ApiError extends Error {
   status: number;
