@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
+import { useState } from "react";
 import { api, API_URL } from "../lib/api";
 import type { EmailAccount } from "../lib/types";
 
@@ -9,10 +10,21 @@ const GMAIL_STATUS_MESSAGES: Record<string, { text: string; tone: "success" | "e
   error: { text: "Something went wrong connecting Gmail. Please try again.", tone: "error" },
 };
 
+type SyncSummary = {
+  scanned: number;
+  created: number;
+  updated: number;
+  skippedNotJobRelated: number;
+  alreadyProcessed: number;
+  failed: number;
+  stoppedEarly: "quota_exceeded" | null;
+};
+
 export function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const gmailStatus = searchParams.get("gmail");
+  const [syncSummaries, setSyncSummaries] = useState<Record<string, SyncSummary>>({});
 
   const { data: accounts, isLoading } = useQuery({
     queryKey: ["email-accounts"],
@@ -22,6 +34,15 @@ export function SettingsPage() {
   const disconnectMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/email-accounts/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["email-accounts"] }),
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: (id: string) => api.post<SyncSummary>(`/email-accounts/${id}/sync`),
+    onSuccess: (summary, id) => {
+      setSyncSummaries((prev) => ({ ...prev, [id]: summary }));
+      queryClient.invalidateQueries({ queryKey: ["email-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    },
   });
 
   const statusMessage = gmailStatus ? GMAIL_STATUS_MESSAGES[gmailStatus] : null;
@@ -70,29 +91,56 @@ export function SettingsPage() {
         )}
 
         {accounts && accounts.length > 0 && (
-          <ul className="space-y-2">
-            {accounts.map((account) => (
-              <li
-                key={account.id}
-                className="flex items-center justify-between rounded-md border border-gray-200 px-4 py-3 text-sm"
-              >
-                <div>
-                  <p className="font-medium text-gray-900">{account.email}</p>
-                  <p className="text-gray-500">
-                    {account.lastSyncedAt
-                      ? `Last synced ${new Date(account.lastSyncedAt).toLocaleString()}`
-                      : "Not synced yet"}
-                  </p>
-                </div>
-                <button
-                  onClick={() => disconnectMutation.mutate(account.id)}
-                  disabled={disconnectMutation.isPending}
-                  className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
-                >
-                  Disconnect
-                </button>
-              </li>
-            ))}
+          <ul className="space-y-3">
+            {accounts.map((account) => {
+              const summary = syncSummaries[account.id];
+              const isSyncingThis = syncMutation.isPending && syncMutation.variables === account.id;
+              return (
+                <li key={account.id} className="rounded-md border border-gray-200 px-4 py-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">{account.email}</p>
+                      <p className="text-gray-500">
+                        {account.lastSyncedAt
+                          ? `Last synced ${new Date(account.lastSyncedAt).toLocaleString()}`
+                          : "Not synced yet"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => syncMutation.mutate(account.id)}
+                        disabled={isSyncingThis}
+                        className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium hover:bg-gray-100 disabled:opacity-50"
+                      >
+                        {isSyncingThis ? "Syncing…" : "Sync now"}
+                      </button>
+                      <button
+                        onClick={() => disconnectMutation.mutate(account.id)}
+                        disabled={disconnectMutation.isPending}
+                        className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        Disconnect
+                      </button>
+                    </div>
+                  </div>
+                  {summary && (
+                    <>
+                      <p className="mt-2 text-xs text-gray-500">
+                        Scanned {summary.scanned} · {summary.created} new · {summary.updated} updated ·{" "}
+                        {summary.skippedNotJobRelated} not job-related · {summary.alreadyProcessed} already seen
+                        {summary.failed > 0 && ` · ${summary.failed} failed`}
+                      </p>
+                      {summary.stoppedEarly === "quota_exceeded" && (
+                        <p className="mt-1 text-xs text-amber-700">
+                          Stopped early: the Gemini API quota was exhausted. Try again later, or fewer emails at a
+                          time.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

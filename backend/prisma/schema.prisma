@@ -67,7 +67,28 @@ model EmailAccount {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  rawEmails            RawEmail[]
+
   @@unique([userId, provider, email])
+}
+
+model RawEmail {
+  id                  String   @id @default(uuid())
+  emailAccountId      String
+  emailAccount        EmailAccount @relation(fields: [emailAccountId], references: [id], onDelete: Cascade)
+
+  gmailMessageId      String
+  subject             String?
+  fromAddress         String?
+  receivedAt          DateTime?
+
+  processed           Boolean  @default(false)
+  matchedApplicationId String?
+  extractionConfidence Float?
+
+  createdAt           DateTime @default(now())
+
+  @@unique([emailAccountId, gmailMessageId])
 }
 
 enum EmailProvider {

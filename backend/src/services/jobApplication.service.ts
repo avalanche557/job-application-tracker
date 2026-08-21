@@ -65,7 +65,12 @@ export type UpdateApplicationInput = Partial<{
   needsReview: boolean;
 }>;
 
-export async function updateApplication(userId: string, id: string, input: UpdateApplicationInput) {
+export async function updateApplication(
+  userId: string,
+  id: string,
+  input: UpdateApplicationInput,
+  historySource: ApplicationSource = "MANUAL",
+) {
   const existing = await prisma.jobApplication.findFirst({ where: { id, userId } });
   if (!existing) return null;
 
@@ -76,10 +81,19 @@ export async function updateApplication(userId: string, id: string, input: Updat
     data: {
       ...input,
       ...(statusChanged && {
-        statusHistory: { create: { status: input.status!, source: "MANUAL" } },
+        statusHistory: { create: { status: input.status!, source: historySource } },
       }),
     },
     include: { statusHistory: { orderBy: { changedAt: "desc" } } },
+  });
+}
+
+// Best-effort match for the email pipeline: same user, same company (case-insensitive).
+// Picks the most recently touched one if a company has multiple applications on file.
+export function findApplicationByCompany(userId: string, companyName: string) {
+  return prisma.jobApplication.findFirst({
+    where: { userId, companyName: { equals: companyName, mode: "insensitive" } },
+    orderBy: { updatedAt: "desc" },
   });
 }
 

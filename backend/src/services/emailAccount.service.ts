@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma.js";
-import { encrypt } from "../lib/crypto.js";
+import { encrypt, decrypt } from "../lib/crypto.js";
 
 export function listEmailAccounts(userId: string) {
   return prisma.emailAccount.findMany({
@@ -34,6 +34,16 @@ export async function upsertGmailAccount(
       expiryDate: data.expiryDate,
     },
   });
+}
+
+export async function getEmailAccountWithDecryptedToken(userId: string, id: string) {
+  const account = await prisma.emailAccount.findFirst({ where: { id, userId } });
+  if (!account) return null;
+  return { ...account, refreshToken: decrypt(account.encryptedRefreshToken) };
+}
+
+export function touchLastSynced(id: string) {
+  return prisma.emailAccount.update({ where: { id }, data: { lastSyncedAt: new Date() } });
 }
 
 export async function deleteEmailAccount(userId: string, id: string) {
