@@ -4,6 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { prisma } from "./lib/prisma.js";
 import authRoutes from "./routes/auth.routes.js";
+import applicationsRoutes from "./routes/applications.routes.js";
 
 const app = express();
 const port = process.env.PORT ?? 4000;
@@ -18,6 +19,7 @@ app.get("/health", async (_req, res) => {
 });
 
 app.use("/auth", authRoutes);
+app.use("/applications", applicationsRoutes);
 
 app.listen(port, () => {
   console.log(`Backend listening on http://localhost:${port}`);
