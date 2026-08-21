@@ -64,7 +64,7 @@ export function DetailPage() {
   });
 
   if (isLoading || !application || !form) {
-    return <p className="text-sm text-gray-500">Loading…</p>;
+    return <p className="font-mono text-[13px] text-ink-soft">Loading…</p>;
   }
 
   function handleSubmit(e: FormEvent) {
@@ -86,31 +86,31 @@ export function DetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/" className="text-sm text-gray-500 hover:underline">
+      <Link to="/" className="inline-flex items-center gap-1 font-mono text-[13px] text-ink-soft hover:text-ink">
         ← Back to applications
       </Link>
 
       {application.needsReview && (
-        <div className="flex items-center justify-between rounded-md border border-purple-200 bg-purple-50 px-4 py-3">
-          <p className="text-sm text-purple-800">
+        <div className="flex items-center justify-between rounded-[6px] border border-glow/40 bg-glow-soft px-5 py-3.5">
+          <p className="text-sm text-glow-ink">
             This application was auto-detected from email and hasn't been reviewed yet.
           </p>
           <button
             onClick={() => updateMutation.mutate({ needsReview: false })}
-            className="rounded-md bg-purple-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-purple-700"
+            className="btn border-glow/50 bg-paper px-3 py-1.5 text-glow-ink hover:border-glow hover:bg-paper"
           >
             Confirm
           </button>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
+      <form onSubmit={handleSubmit} className="card space-y-5 p-7">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-gray-900">Application details</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-ink">Application details</h1>
           <StatusBadge status={application.status} />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-x-5 gap-y-4">
           <Field label="Company">
             <input
               value={form.companyName}
@@ -171,36 +171,35 @@ export function DetailPage() {
           />
         </Field>
 
-        {updateMutation.isError && <p className="text-sm text-red-600">Failed to save changes.</p>}
+        {updateMutation.isError && (
+          <p className="rounded-[5px] border border-rust/40 bg-rust-soft px-3 py-2 text-sm text-rust-ink">
+            Failed to save changes.
+          </p>
+        )}
 
-        <div className="flex items-center justify-between pt-2">
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
-          >
+        <div className="flex items-center justify-between border-t border-line pt-5">
+          <button type="button" onClick={handleDelete} className="btn btn-danger">
             Delete
           </button>
-          <button
-            type="submit"
-            disabled={updateMutation.isPending}
-            className="rounded-md bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
-          >
+          <button type="submit" disabled={updateMutation.isPending} className="btn btn-primary px-5">
             {updateMutation.isPending ? "Saving…" : "Save changes"}
           </button>
         </div>
       </form>
 
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="mb-3 text-sm font-semibold text-gray-900">Status history</h2>
-        <ol className="space-y-2">
+      <div className="card p-7">
+        <h2 className="label mb-5">Status history</h2>
+        <ol className="relative space-y-6 border-l border-line pl-6">
           {application.statusHistory.map((entry) => (
-            <li key={entry.id} className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <StatusBadge status={entry.status} />
-                <span className="text-gray-400">via {entry.source.toLowerCase()}</span>
+            <li key={entry.id} className="relative">
+              <span className="absolute top-1 -left-[27px] h-2.5 w-2.5 rounded-full border-2 border-paper bg-ink ring-1 ring-line-strong" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={entry.status} />
+                  <span className="font-mono text-[11px] text-ink-soft">via {entry.source.toLowerCase()}</span>
+                </div>
+                <span className="font-mono text-[12px] text-ink-soft">{new Date(entry.changedAt).toLocaleString()}</span>
               </div>
-              <span className="text-gray-500">{new Date(entry.changedAt).toLocaleString()}</span>
             </li>
           ))}
         </ol>
@@ -212,8 +211,8 @@ export function DetailPage() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-sm font-medium text-gray-700">{label}</span>
-      <div className="mt-1">{children}</div>
+      <span className="label">{label}</span>
+      {children}
     </label>
   );
 }

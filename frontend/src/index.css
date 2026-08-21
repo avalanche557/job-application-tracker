@@ -1,7 +1,59 @@
 @import "tailwindcss";
 
+@theme {
+  --color-paper: #ffffff;
+  --color-paper-dim: #f4f4f4;
+  --color-ink: #182644;
+  --color-ink-soft: #4a5674;
+  --color-line: #e6e6e6;
+  --color-line-strong: #9aa7b6;
+  --color-accent: #2f7c63;
+  --color-accent-soft: #dfeae4;
+  --color-accent-ink: #1f4d3d;
+  --color-glow: #ffa366;
+  --color-glow-soft: #ffe9d9;
+  --color-glow-ink: #8a4a1f;
+  --color-rust: #b3483f;
+  --color-rust-soft: #f6e1df;
+  --color-rust-ink: #7a2e28;
+
+  --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+body {
+  background-color: var(--color-paper);
+  background-image:
+    linear-gradient(#f2f2f2 1px, transparent 1px),
+    linear-gradient(90deg, #f2f2f2 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: -1px -1px;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
 @layer components {
   .input {
-    @apply w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none;
+    @apply w-full rounded-[5px] border border-line-strong bg-paper px-3 py-2 text-sm text-ink transition-colors placeholder:text-ink-soft/60 focus:border-accent focus:outline-none;
+  }
+
+  .label {
+    @apply mb-1.5 block font-mono text-[11px] font-medium tracking-wider text-ink-soft uppercase;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-[5px] border border-line-strong bg-paper px-4 py-2 font-mono text-[13px] text-ink transition-all hover:-translate-y-px hover:border-accent disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply border-ink bg-ink text-paper hover:border-accent-ink hover:bg-accent-ink;
+  }
+
+  .btn-danger {
+    @apply border-rust/40 text-rust-ink hover:border-rust hover:bg-rust-soft;
+  }
+
+  .card {
+    @apply rounded-[6px] border border-line bg-paper;
   }
 }

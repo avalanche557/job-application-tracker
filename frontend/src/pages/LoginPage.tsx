@@ -25,40 +25,56 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <h1 className="text-xl font-semibold text-gray-900">Log in</h1>
-        {loginError && <p className="text-sm text-red-600">{loginError}</p>}
+    <div className="flex min-h-screen items-center justify-center px-4">
+      <form onSubmit={handleSubmit} className="card w-full max-w-sm space-y-5 p-8">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-ink font-mono text-[11px] font-semibold text-paper">
+            JT
+          </span>
+          <h1 className="font-mono text-sm font-medium text-ink">Job Tracker</h1>
+        </div>
+
         <div>
-          <label className="block text-sm font-medium text-gray-700">Email</label>
+          <h2 className="text-xl font-semibold text-ink">Welcome back</h2>
+          <p className="mt-1 text-sm text-ink-soft">Log in to your account</p>
+        </div>
+
+        {loginError && (
+          <p className="rounded-[5px] border border-rust/40 bg-rust-soft px-3 py-2 text-sm text-rust-ink">{loginError}</p>
+        )}
+
+        <div>
+          <label className="label" htmlFor="email">
+            Email
+          </label>
           <input
+            id="email"
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+            className="input"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Password</label>
+          <label className="label" htmlFor="password">
+            Password
+          </label>
           <input
+            id="password"
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+            className="input"
           />
         </div>
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
-        >
+        <button type="submit" disabled={submitting} className="btn btn-primary w-full">
           {submitting ? "Logging in…" : "Log in"}
         </button>
-        <p className="text-center text-sm text-gray-500">
+        <p className="text-center text-sm text-ink-soft">
           No account?{" "}
-          <Link to="/signup" className="text-gray-900 underline">
+          <Link to="/signup" className="text-ink underline decoration-line-strong underline-offset-2 hover:text-accent-ink">
             Sign up
           </Link>
         </p>

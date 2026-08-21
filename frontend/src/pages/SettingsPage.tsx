@@ -56,36 +56,33 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-lg font-semibold text-gray-900">Settings</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-ink">Settings</h1>
 
       {statusMessage && (
         <div
-          className={`flex items-center justify-between rounded-md border px-4 py-3 text-sm ${
+          className={`flex items-center justify-between rounded-[6px] border px-5 py-3.5 text-sm ${
             statusMessage.tone === "success"
-              ? "border-green-200 bg-green-50 text-green-800"
-              : "border-red-200 bg-red-50 text-red-800"
+              ? "border-accent/40 bg-accent-soft text-accent-ink"
+              : "border-rust/40 bg-rust-soft text-rust-ink"
           }`}
         >
           <span>{statusMessage.text}</span>
-          <button onClick={dismissStatus} className="text-xs underline">
+          <button onClick={dismissStatus} className="font-mono text-[11px] underline">
             Dismiss
           </button>
         </div>
       )}
 
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="mb-1 text-sm font-semibold text-gray-900">Connected email accounts</h2>
-        <p className="mb-4 text-sm text-gray-500">
+      <div className="card p-7">
+        <h2 className="mb-1 text-sm font-semibold text-ink">Connected email accounts</h2>
+        <p className="mb-5 text-sm text-ink-soft">
           Connect Gmail to automatically detect job applications from your inbox.
         </p>
 
-        {isLoading && <p className="text-sm text-gray-500">Loading…</p>}
+        {isLoading && <p className="font-mono text-[13px] text-ink-soft">Loading…</p>}
 
         {accounts && accounts.length === 0 && (
-          <a
-            href={`${API_URL}/auth/google`}
-            className="inline-block rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
-          >
+          <a href={`${API_URL}/auth/google`} className="btn btn-primary inline-flex px-5">
             Connect Gmail
           </a>
         )}
@@ -96,28 +93,24 @@ export function SettingsPage() {
               const summary = syncSummaries[account.id];
               const isSyncingThis = syncMutation.isPending && syncMutation.variables === account.id;
               return (
-                <li key={account.id} className="rounded-md border border-gray-200 px-4 py-3 text-sm">
+                <li key={account.id} className="rounded-[6px] border border-line px-5 py-4 text-sm">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-900">{account.email}</p>
-                      <p className="text-gray-500">
+                      <p className="font-medium text-ink">{account.email}</p>
+                      <p className="mt-0.5 font-mono text-[12px] text-ink-soft">
                         {account.lastSyncedAt
                           ? `Last synced ${new Date(account.lastSyncedAt).toLocaleString()}`
                           : "Not synced yet"}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => syncMutation.mutate(account.id)}
-                        disabled={isSyncingThis}
-                        className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium hover:bg-gray-100 disabled:opacity-50"
-                      >
+                      <button onClick={() => syncMutation.mutate(account.id)} disabled={isSyncingThis} className="btn px-3 py-1.5">
                         {isSyncingThis ? "Syncing…" : "Sync now"}
                       </button>
                       <button
                         onClick={() => disconnectMutation.mutate(account.id)}
                         disabled={disconnectMutation.isPending}
-                        className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        className="btn btn-danger px-3 py-1.5"
                       >
                         Disconnect
                       </button>
@@ -125,13 +118,13 @@ export function SettingsPage() {
                   </div>
                   {summary && (
                     <>
-                      <p className="mt-2 text-xs text-gray-500">
+                      <p className="mt-3 border-t border-line pt-3 font-mono text-[11.5px] text-ink-soft">
                         Scanned {summary.scanned} · {summary.created} new · {summary.updated} updated ·{" "}
                         {summary.skippedNotJobRelated} not job-related · {summary.alreadyProcessed} already seen
                         {summary.failed > 0 && ` · ${summary.failed} failed`}
                       </p>
                       {summary.stoppedEarly === "quota_exceeded" && (
-                        <p className="mt-1 text-xs text-amber-700">
+                        <p className="mt-1.5 font-mono text-[11.5px] text-glow-ink">
                           Stopped early: the Gemini API quota was exhausted. Try again later, or fewer emails at a
                           time.
                         </p>
