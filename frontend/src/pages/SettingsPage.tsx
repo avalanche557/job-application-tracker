@@ -17,6 +17,9 @@ type SyncSummary = {
   skippedNotJobRelated: number;
   alreadyProcessed: number;
   failed: number;
+  resolvedByRegex: number;
+  resolvedByLlm: number;
+  skippedQuotaExhausted: number;
   stoppedEarly: "quota_exceeded" | null;
 };
 
@@ -123,10 +126,14 @@ export function SettingsPage() {
                         {summary.skippedNotJobRelated} not job-related · {summary.alreadyProcessed} already seen
                         {summary.failed > 0 && ` · ${summary.failed} failed`}
                       </p>
+                      <p className="mt-1 font-mono text-[11.5px] text-ink-soft">
+                        {summary.resolvedByRegex} resolved by pattern match, {summary.resolvedByLlm} by AI
+                      </p>
                       {summary.stoppedEarly === "quota_exceeded" && (
                         <p className="mt-1.5 font-mono text-[11.5px] text-glow-ink">
-                          Stopped early: the Gemini API quota was exhausted. Try again later, or fewer emails at a
-                          time.
+                          Gemini quota ran out partway through — {summary.skippedQuotaExhausted} email
+                          {summary.skippedQuotaExhausted === 1 ? "" : "s"} that needed AI were skipped and will be
+                          retried on the next sync.
                         </p>
                       )}
                     </>

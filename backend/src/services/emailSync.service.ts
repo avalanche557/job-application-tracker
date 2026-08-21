@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma.js";
 import { listCandidateMessageIds, fetchMessage } from "../lib/gmailClient.js";
-import { extractJobApplicationInfo, isQuotaExceededError } from "../lib/gemini.js";
+import { extractJobApplicationInfo, isQuotaExceededError, type ExtractionResult } from "../lib/gemini.js";
+import { classifyWithRegex } from "../lib/emailClassifier.js";
 import {
   createApplication,
   updateApplication,
@@ -17,6 +18,9 @@ export type SyncSummary = {
   skippedNotJobRelated: number;
   alreadyProcessed: number;
   failed: number;
+  resolvedByRegex: number;
+  resolvedByLlm: number;
+  skippedQuotaExhausted: number;
   stoppedEarly: "quota_exceeded" | null;
 };
 
@@ -31,10 +35,19 @@ export async function syncEmailAccount(userId: string, emailAccountId: string): 
     skippedNotJobRelated: 0,
     alreadyProcessed: 0,
     failed: 0,
+    resolvedByRegex: 0,
+    resolvedByLlm: 0,
+    skippedQuotaExhausted: 0,
     stoppedEarly: null,
   };
 
   const messageIds = await listCandidateMessageIds(account.refreshToken);
+
+  // Once Gemini's quota is exhausted, regex-resolvable messages can still be
+  // processed for free - only messages that actually need the LLM get
+  // skipped (and left unprocessed, so a later sync retries them once quota
+  // resets, rather than wasting a doomed API call on each one now).
+  let geminiQuotaExhausted = false;
 
   for (const gmailMessageId of messageIds) {
     summary.scanned++;
@@ -49,11 +62,33 @@ export async function syncEmailAccount(userId: string, emailAccountId: string): 
 
     try {
       const message = await fetchMessage(account.refreshToken, gmailMessageId);
-      const extraction = await extractJobApplicationInfo({
-        subject: message.subject,
-        from: message.from,
-        bodyText: message.bodyText,
-      });
+      const regexResult = classifyWithRegex({ subject: message.subject });
+
+      let extraction: ExtractionResult;
+      if (regexResult) {
+        extraction = regexResult;
+        summary.resolvedByRegex++;
+      } else if (geminiQuotaExhausted) {
+        summary.skippedQuotaExhausted++;
+        continue;
+      } else {
+        try {
+          extraction = await extractJobApplicationInfo({
+            subject: message.subject,
+            from: message.from,
+            bodyText: message.bodyText,
+          });
+          summary.resolvedByLlm++;
+        } catch (err) {
+          if (isQuotaExceededError(err)) {
+            geminiQuotaExhausted = true;
+            summary.stoppedEarly = "quota_exceeded";
+            summary.skippedQuotaExhausted++;
+            continue;
+          }
+          throw err;
+        }
+      }
 
       let matchedApplicationId: string | null = null;
 
@@ -100,11 +135,6 @@ export async function syncEmailAccount(userId: string, emailAccountId: string): 
     } catch (err) {
       console.error(`Failed to process Gmail message ${gmailMessageId}:`, err);
       summary.failed++;
-
-      if (isQuotaExceededError(err)) {
-        summary.stoppedEarly = "quota_exceeded";
-        break;
-      }
     }
   }
 
