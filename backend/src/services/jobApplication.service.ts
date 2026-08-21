@@ -79,6 +79,7 @@ export async function updateApplication(userId: string, id: string, input: Updat
         statusHistory: { create: { status: input.status!, source: "MANUAL" } },
       }),
     },
+    include: { statusHistory: { orderBy: { changedAt: "desc" } } },
   });
 }
 
