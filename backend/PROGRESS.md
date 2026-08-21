@@ -16,6 +16,7 @@ Express + TypeScript API, Postgres via Prisma. Part of the job-tracking-app mono
 - **Local Postgres** — installed via `brew install postgresql@16`, running as a brew service. Dedicated role/db (not the default superuser): role `job_tracker_user`, database `job_tracker`, both created via `psql`. Role has `CREATEDB` granted (needed for Prisma's shadow database during `migrate dev`).
 - **Prisma setup** — `@prisma/client`, `prisma`, `@prisma/adapter-pg`, `pg` installed. Schema at `prisma/schema.prisma` with `User`, `JobApplication`, `StatusHistory` models and `ApplicationStatus`/`ApplicationSource` enums. First migration (`init`) applied.
 - **Verified end-to-end**: Express → Prisma → Postgres works (`/health` runs `SELECT 1` through Prisma; a scratch script did create/read/delete on `User`).
+- **Auth** — `POST /auth/signup`, `/login`, `/refresh`, `/logout`, `GET /auth/me` in `src/routes/auth.routes.ts`. bcryptjs for hashing (12 rounds), `jsonwebtoken` for access (15m) + refresh (7d) tokens, both set as httpOnly cookies (`src/lib/cookies.ts`) — refresh cookie is scoped to `Path=/auth/refresh` so it's never sent on normal requests. Refresh tokens are stateless (verified by signature only, not stored/revocable server-side) — fine for now, would need a persisted token table to support revocation later. `requireAuth` middleware (`src/middleware/auth.ts`) reads the access-token cookie and sets `req.userId`. Request bodies validated with `zod`. CORS configured with `credentials: true` and origin locked to `FRONTEND_URL` (required for cookies to work cross-origin). Manually verified full flow with curl: signup → me → duplicate signup (409) → wrong password (401) → refresh (rotates cookies) → logout → me (401).
 
 ### Prisma 7 gotchas (differs from most tutorials/older docs)
 
@@ -37,8 +38,6 @@ npm run dev                                 # start API on :4000
 
 ## Next up
 
-1. Auth endpoints: `POST /auth/signup`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` (JWT in httpOnly cookies + bcrypt).
-2. Auth middleware to protect routes.
-3. `JobApplication` CRUD endpoints (list w/ filter+sort, get by id, create, update, delete) backing the frontend's home + detail pages.
-4. Gmail OAuth connection flow + `EmailAccount`/`RawEmail` models (not yet in schema).
-5. BullMQ worker + Claude-based extraction pipeline for auto-populating applications from email.
+1. `JobApplication` CRUD endpoints (list w/ filter+sort, get by id, create, update, delete) backing the frontend's home + detail pages — protected by `requireAuth`.
+2. Gmail OAuth connection flow + `EmailAccount`/`RawEmail` models (not yet in schema).
+3. BullMQ worker + Claude-based extraction pipeline for auto-populating applications from email.
