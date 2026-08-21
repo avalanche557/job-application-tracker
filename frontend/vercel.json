@@ -1,3 +1,9 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/auth/:path*", "destination": "https://job-application-tracker-yba0.onrender.com/auth/:path*" },
+    { "source": "/applications/:path*", "destination": "https://job-application-tracker-yba0.onrender.com/applications/:path*" },
+    { "source": "/email-accounts/:path*", "destination": "https://job-application-tracker-yba0.onrender.com/email-accounts/:path*" },
+    { "source": "/health", "destination": "https://job-application-tracker-yba0.onrender.com/health" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
