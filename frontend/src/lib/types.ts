@@ -34,3 +34,11 @@ export type User = {
   email: string;
   createdAt: string;
 };
+
+export type EmailAccount = {
+  id: string;
+  provider: "GMAIL";
+  email: string;
+  createdAt: string;
+  lastSyncedAt: string | null;
+};

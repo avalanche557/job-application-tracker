@@ -14,6 +14,9 @@ export function Layout() {
           </Link>
           {user && (
             <div className="flex items-center gap-4 text-sm text-gray-600">
+              <Link to="/settings" className="hover:underline">
+                Settings
+              </Link>
               <span>{user.email}</span>
               <button
                 onClick={async () => {

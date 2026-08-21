@@ -27,3 +27,14 @@ export function verifyAccessToken(token: string): TokenPayload {
 export function verifyRefreshToken(token: string): TokenPayload {
   return jwt.verify(token, REFRESH_SECRET) as TokenPayload;
 }
+
+// Short-lived, single-purpose token carried through the Google OAuth `state`
+// param, so the callback can identify the user without depending on cookies
+// surviving the third-party redirect.
+export function signOAuthState(userId: string): string {
+  return jwt.sign({ sub: userId } satisfies TokenPayload, ACCESS_SECRET, { expiresIn: "5m" });
+}
+
+export function verifyOAuthState(state: string): TokenPayload {
+  return jwt.verify(state, ACCESS_SECRET) as TokenPayload;
+}

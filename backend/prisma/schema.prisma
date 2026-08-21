@@ -14,6 +14,7 @@ model User {
   createdAt    DateTime @default(now())
 
   applications JobApplication[]
+  emailAccounts EmailAccount[]
 }
 
 model JobApplication {
@@ -49,6 +50,28 @@ model StatusHistory {
   source    ApplicationSource @default(MANUAL)
 
   @@index([applicationId])
+}
+
+model EmailAccount {
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  provider            EmailProvider @default(GMAIL)
+  email               String
+  encryptedRefreshToken String
+  scope               String
+  expiryDate          DateTime?
+  lastSyncedAt        DateTime?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([userId, provider, email])
+}
+
+enum EmailProvider {
+  GMAIL
 }
 
 enum ApplicationStatus {

@@ -5,6 +5,8 @@ import cookieParser from "cookie-parser";
 import { prisma } from "./lib/prisma.js";
 import authRoutes from "./routes/auth.routes.js";
 import applicationsRoutes from "./routes/applications.routes.js";
+import googleRoutes from "./routes/google.routes.js";
+import emailAccountsRoutes from "./routes/emailAccounts.routes.js";
 
 const app = express();
 const port = process.env.PORT ?? 4000;
@@ -19,7 +21,9 @@ app.get("/health", async (_req, res) => {
 });
 
 app.use("/auth", authRoutes);
+app.use("/auth", googleRoutes);
 app.use("/applications", applicationsRoutes);
+app.use("/email-accounts", emailAccountsRoutes);
 
 app.listen(port, () => {
   console.log(`Backend listening on http://localhost:${port}`);
