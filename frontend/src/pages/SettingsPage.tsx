@@ -40,8 +40,9 @@ export function SettingsPage() {
   });
 
   const syncMutation = useMutation({
-    mutationFn: (id: string) => api.post<SyncSummary>(`/email-accounts/${id}/sync`),
-    onSuccess: (summary, id) => {
+    mutationFn: ({ id, force }: { id: string; force?: boolean }) =>
+      api.post<SyncSummary>(`/email-accounts/${id}/sync${force ? "?force=true" : ""}`),
+    onSuccess: (summary, { id }) => {
       setSyncSummaries((prev) => ({ ...prev, [id]: summary }));
       queryClient.invalidateQueries({ queryKey: ["email-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["applications"] });
@@ -94,7 +95,7 @@ export function SettingsPage() {
           <ul className="space-y-3">
             {accounts.map((account) => {
               const summary = syncSummaries[account.id];
-              const isSyncingThis = syncMutation.isPending && syncMutation.variables === account.id;
+              const isSyncingThis = syncMutation.isPending && syncMutation.variables?.id === account.id;
               return (
                 <li key={account.id} className="rounded-[6px] border border-line px-5 py-4 text-sm">
                   <div className="flex items-center justify-between">
@@ -107,8 +108,20 @@ export function SettingsPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => syncMutation.mutate(account.id)} disabled={isSyncingThis} className="btn px-3 py-1.5">
+                      <button
+                        onClick={() => syncMutation.mutate({ id: account.id })}
+                        disabled={isSyncingThis}
+                        className="btn px-3 py-1.5"
+                      >
                         {isSyncingThis ? "Syncing…" : "Sync now"}
+                      </button>
+                      <button
+                        onClick={() => syncMutation.mutate({ id: account.id, force: true })}
+                        disabled={isSyncingThis}
+                        title="Re-scan the last 3 weeks of email, including messages already processed"
+                        className="btn px-3 py-1.5"
+                      >
+                        {isSyncingThis ? "Syncing…" : "Resync (3 weeks)"}
                       </button>
                       <button
                         onClick={() => disconnectMutation.mutate(account.id)}

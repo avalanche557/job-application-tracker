@@ -24,9 +24,15 @@ export type SyncSummary = {
   stoppedEarly: "quota_exceeded" | null;
 };
 
-export async function syncEmailAccount(userId: string, emailAccountId: string): Promise<SyncSummary> {
+export async function syncEmailAccount(
+  userId: string,
+  emailAccountId: string,
+  options?: { force?: boolean },
+): Promise<SyncSummary> {
   const account = await getEmailAccountWithDecryptedToken(userId, emailAccountId);
   if (!account) throw new Error("Email account not found");
+
+  const force = options?.force ?? false;
 
   const summary: SyncSummary = {
     scanned: 0,
@@ -41,7 +47,12 @@ export async function syncEmailAccount(userId: string, emailAccountId: string): 
     stoppedEarly: null,
   };
 
-  const messageIds = await listCandidateMessageIds(account.refreshToken, account.lastSyncedAt);
+  // Force ignores the incremental cursor entirely, re-scanning the same
+  // 3-week window a first-ever sync would use (see listCandidateMessageIds),
+  // and re-processes messages already recorded in RawEmail below - useful
+  // after a classifier/query change, to pick up mail the old logic missed or
+  // misclassified.
+  const messageIds = await listCandidateMessageIds(account.refreshToken, force ? null : account.lastSyncedAt);
 
   // Once Gemini's quota is exhausted, regex-resolvable messages can still be
   // processed for free - only messages that actually need the LLM get
@@ -55,7 +66,7 @@ export async function syncEmailAccount(userId: string, emailAccountId: string): 
     const alreadySeen = await prisma.rawEmail.findUnique({
       where: { emailAccountId_gmailMessageId: { emailAccountId, gmailMessageId } },
     });
-    if (alreadySeen) {
+    if (alreadySeen && !force) {
       summary.alreadyProcessed++;
       continue;
     }
@@ -138,10 +149,19 @@ export async function syncEmailAccount(userId: string, emailAccountId: string): 
         summary.skippedNotJobRelated++;
       }
 
-      await prisma.rawEmail.create({
-        data: {
+      await prisma.rawEmail.upsert({
+        where: { emailAccountId_gmailMessageId: { emailAccountId, gmailMessageId } },
+        create: {
           emailAccountId,
           gmailMessageId,
+          subject: message.subject,
+          fromAddress: message.from,
+          receivedAt: message.receivedAt,
+          processed: true,
+          matchedApplicationId,
+          extractionConfidence: extraction.confidence,
+        },
+        update: {
           subject: message.subject,
           fromAddress: message.from,
           receivedAt: message.receivedAt,

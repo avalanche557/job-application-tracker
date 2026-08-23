@@ -13,7 +13,8 @@ router.get("/", async (req, res) => {
 
 router.post("/:id/sync", async (req, res) => {
   try {
-    const summary = await syncEmailAccount(req.userId!, req.params.id);
+    const force = req.query.force === "true";
+    const summary = await syncEmailAccount(req.userId!, req.params.id, { force });
     res.json(summary);
   } catch (err) {
     if (err instanceof Error && err.message === "Email account not found") {
