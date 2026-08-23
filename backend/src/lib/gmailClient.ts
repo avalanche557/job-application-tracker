@@ -4,10 +4,15 @@ import { createOAuthClient } from "./googleOAuth.js";
 // Narrow, heuristic search: job-application-shaped subjects, or the ATS/job-board
 // senders that generate most of this traffic. Keeps the sync fast and avoids
 // scanning the whole inbox. Not exhaustive - misses get caught by manual review.
-const SEARCH_QUERY =
-  '(subject:(application OR applying OR "thank you for applying" OR interview OR "your application" OR offer OR rejected OR "not moving forward") ' +
-  "OR from:(greenhouse OR lever OR workday OR icims OR smartrecruiters OR jobvite OR linkedin OR indeed OR ashbyhq)) " +
-  "newer_than:90d";
+const BASE_SEARCH_QUERY =
+  '(subject:(application OR applying OR "thank you for applying" OR interview OR "your application" OR offer OR rejected OR "not moving forward" OR "your interest" OR "interest in" OR "role at") ' +
+  "OR from:(greenhouse OR lever OR workday OR icims OR smartrecruiters OR jobvite OR linkedin OR indeed OR ashbyhq))";
+
+// A day of overlap on the lower bound: Gmail's `after:` is date-granular (not
+// second-granular), and RawEmail dedup makes re-seeing a message harmless, so
+// erring toward re-listing a few already-processed messages is safer than
+// risking a gap right at the boundary.
+const INCREMENTAL_OVERLAP_MS = 24 * 60 * 60 * 1000;
 
 export type GmailMessage = {
   id: string;
@@ -70,15 +75,23 @@ function header(headers: { name?: string | null; value?: string | null }[] | und
   return headers?.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value ?? null;
 }
 
-export async function listCandidateMessageIds(refreshToken: string): Promise<string[]> {
+// `since` should be the account's last successful sync time, if any - narrows
+// the search to messages that arrived after the last sync (with a day of
+// overlap, see INCREMENTAL_OVERLAP_MS) instead of re-listing the full
+// window on every run. First-ever sync (no `since`) scans the last 3 weeks.
+export async function listCandidateMessageIds(refreshToken: string, since?: Date | null): Promise<string[]> {
   const gmail = buildAuthedClient(refreshToken);
   const ids: string[] = [];
   let pageToken: string | undefined;
 
+  const query = since
+    ? `${BASE_SEARCH_QUERY} after:${Math.floor((since.getTime() - INCREMENTAL_OVERLAP_MS) / 1000)}`
+    : `${BASE_SEARCH_QUERY} newer_than:21d`;
+
   do {
     const { data } = await gmail.users.messages.list({
       userId: "me",
-      q: SEARCH_QUERY,
+      q: query,
       maxResults: 50,
       pageToken,
     });

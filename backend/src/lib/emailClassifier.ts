@@ -18,6 +18,14 @@ const APPLICATION_SUBMITTED_PATTERNS: RegExp[] = [
   /^your application to (.+?) (?:has been |was )?(?:received|submitted)/i,
 ];
 
+// A smaller set of templates where the job title and company are both
+// unambiguously positioned (title first, company after "at"), unlike the
+// "applying to X - Title" style above where the two are interchangeable and
+// left for the LLM. First capture group is the job title, second the company.
+const APPLICATION_WITH_TITLE_PATTERNS: RegExp[] = [
+  /^thank you for your interest in the (.+?) role at (.+?)[!.\s]*$/i,
+];
+
 // Subject lines that are clearly not about a specific application the user
 // submitted - job board digests, alerts, and social/networking noise.
 const NOT_APPLICATION_PATTERNS: RegExp[] = [
@@ -52,6 +60,15 @@ function isPlausibleCompanyName(name: string): boolean {
   return true;
 }
 
+// Job titles run longer than company names ("Architect, Software Engineering")
+// but should still be rejected if they look like a leaked requisition/bracket
+// string rather than a real title.
+function isPlausibleJobTitle(name: string): boolean {
+  if (name.length === 0 || name.length > 80) return false;
+  if (/[[\](){}]/.test(name)) return false;
+  return true;
+}
+
 export function classifyWithRegex(email: { subject: string | null }): ExtractionResult | null {
   const subject = email.subject?.trim();
   if (!subject) return null;
@@ -59,6 +76,23 @@ export function classifyWithRegex(email: { subject: string | null }): Extraction
   for (const pattern of NOT_APPLICATION_PATTERNS) {
     if (pattern.test(subject)) {
       return { isJobApplicationRelated: false, companyName: null, jobTitle: null, status: null, confidence: 0.9 };
+    }
+  }
+
+  for (const pattern of APPLICATION_WITH_TITLE_PATTERNS) {
+    const match = subject.match(pattern);
+    if (match?.[1] && match[2]) {
+      const jobTitle = cleanCompanyName(match[1]);
+      const companyName = cleanCompanyName(match[2]);
+      if (!isPlausibleJobTitle(jobTitle) || !isPlausibleCompanyName(companyName)) return null;
+
+      return {
+        isJobApplicationRelated: true,
+        companyName,
+        jobTitle,
+        status: "APPLIED",
+        confidence: 0.9,
+      };
     }
   }
 

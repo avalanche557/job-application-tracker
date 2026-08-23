@@ -41,7 +41,7 @@ export async function syncEmailAccount(userId: string, emailAccountId: string): 
     stoppedEarly: null,
   };
 
-  const messageIds = await listCandidateMessageIds(account.refreshToken);
+  const messageIds = await listCandidateMessageIds(account.refreshToken, account.lastSyncedAt);
 
   // Once Gemini's quota is exhausted, regex-resolvable messages can still be
   // processed for free - only messages that actually need the LLM get
@@ -64,13 +64,25 @@ export async function syncEmailAccount(userId: string, emailAccountId: string): 
       const message = await fetchMessage(account.refreshToken, gmailMessageId);
       const regexResult = classifyWithRegex({ subject: message.subject });
 
+      // A confident "not job-related" regex match (job alerts, connection
+      // requests, etc.) is trusted outright - no LLM call is worth spending on
+      // something we're already sure isn't an application. A confident
+      // "is job-related" regex match is only a subject-based guess though, so
+      // when quota allows it we still read the full body via the LLM for a
+      // more accurate company/title/status than subject-only regex can give,
+      // falling back to the regex extraction if quota runs out.
       let extraction: ExtractionResult;
-      if (regexResult) {
+      if (regexResult && !regexResult.isJobApplicationRelated) {
         extraction = regexResult;
         summary.resolvedByRegex++;
       } else if (geminiQuotaExhausted) {
-        summary.skippedQuotaExhausted++;
-        continue;
+        if (regexResult) {
+          extraction = regexResult;
+          summary.resolvedByRegex++;
+        } else {
+          summary.skippedQuotaExhausted++;
+          continue;
+        }
       } else {
         try {
           extraction = await extractJobApplicationInfo({
@@ -83,10 +95,16 @@ export async function syncEmailAccount(userId: string, emailAccountId: string): 
           if (isQuotaExceededError(err)) {
             geminiQuotaExhausted = true;
             summary.stoppedEarly = "quota_exceeded";
-            summary.skippedQuotaExhausted++;
-            continue;
+            if (regexResult) {
+              extraction = regexResult;
+              summary.resolvedByRegex++;
+            } else {
+              summary.skippedQuotaExhausted++;
+              continue;
+            }
+          } else {
+            throw err;
           }
-          throw err;
         }
       }
 
@@ -138,6 +156,13 @@ export async function syncEmailAccount(userId: string, emailAccountId: string): 
     }
   }
 
-  await touchLastSynced(emailAccountId);
+  // Only advance the incremental-sync cursor when every candidate in this
+  // run's window was actually resolved (written to RawEmail). Messages
+  // skipped for quota, or that threw, are left unprocessed by design so a
+  // later sync retries them - advancing lastSyncedAt past "now" here would
+  // push them outside the next run's `after:` window and drop them for good.
+  if (summary.skippedQuotaExhausted === 0 && summary.failed === 0) {
+    await touchLastSynced(emailAccountId);
+  }
   return summary;
 }
