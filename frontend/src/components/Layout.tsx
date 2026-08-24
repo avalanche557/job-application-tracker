@@ -9,7 +9,7 @@ export function Layout() {
   return (
     <div className="min-h-screen">
       <header className="border-b border-line bg-paper/90 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-ink font-mono text-[11px] font-semibold tracking-wide text-paper">
               JT
@@ -17,7 +17,7 @@ export function Layout() {
             <span className="font-mono text-sm font-medium text-ink">Job Tracker</span>
           </Link>
           {user && (
-            <nav className="flex items-center gap-6">
+            <nav className="flex items-center gap-3 sm:gap-6">
               <NavLink
                 to="/settings"
                 className={({ isActive }) =>
@@ -46,7 +46,7 @@ export function Layout() {
           )}
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-6 py-10">
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
         <Outlet />
       </main>
     </div>

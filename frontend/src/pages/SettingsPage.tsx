@@ -98,16 +98,16 @@ export function SettingsPage() {
               const isSyncingThis = syncMutation.isPending && syncMutation.variables?.id === account.id;
               return (
                 <li key={account.id} className="rounded-[6px] border border-line px-5 py-4 text-sm">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-ink">{account.email}</p>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="font-medium break-all text-ink">{account.email}</p>
                       <p className="mt-0.5 font-mono text-[12px] text-ink-soft">
                         {account.lastSyncedAt
                           ? `Last synced ${new Date(account.lastSyncedAt).toLocaleString()}`
                           : "Not synced yet"}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         onClick={() => syncMutation.mutate({ id: account.id })}
                         disabled={isSyncingThis}

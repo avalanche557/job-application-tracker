@@ -91,13 +91,13 @@ export function DetailPage() {
       </Link>
 
       {application.needsReview && (
-        <div className="flex items-center justify-between rounded-[6px] border border-glow/40 bg-glow-soft px-5 py-3.5">
+        <div className="flex flex-col gap-3 rounded-[6px] border border-glow/40 bg-glow-soft px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-glow-ink">
             This application was auto-detected from email and hasn't been reviewed yet.
           </p>
           <button
             onClick={() => updateMutation.mutate({ needsReview: false })}
-            className="btn border-glow/50 bg-paper px-3 py-1.5 text-glow-ink hover:border-glow hover:bg-paper"
+            className="btn self-start border-glow/50 bg-paper px-3 py-1.5 text-glow-ink hover:border-glow hover:bg-paper sm:self-auto"
           >
             Confirm
           </button>
@@ -110,7 +110,7 @@ export function DetailPage() {
           <StatusBadge status={application.status} />
         </div>
 
-        <div className="grid grid-cols-2 gap-x-5 gap-y-4">
+        <div className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
           <Field label="Company">
             <input
               value={form.companyName}
