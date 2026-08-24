@@ -2,6 +2,7 @@ import type { EmailInput, ExtractionResult, LLMProvider } from "../types.js";
 import { QuotaExceededError } from "../types.js";
 import { SYSTEM_INSTRUCTION, JSON_SHAPE_INSTRUCTION, buildUserMessage } from "../prompt.js";
 import { isQuotaStatus, withRetry } from "../retry.js";
+import { logRateLimitFromHeaders } from "../rateLimitLog.js";
 
 type HttpError = Error & { status: number };
 
@@ -52,6 +53,8 @@ export function createOpenAICompatibleProvider(opts: {
               ],
             }),
           });
+
+          logRateLimitFromHeaders(opts.name, res.headers);
 
           if (!res.ok) {
             const body = await res.text().catch(() => "");

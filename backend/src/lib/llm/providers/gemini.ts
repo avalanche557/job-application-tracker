@@ -3,6 +3,12 @@ import type { EmailInput, ExtractionResult, LLMProvider } from "../types.js";
 import { QuotaExceededError } from "../types.js";
 import { SYSTEM_INSTRUCTION, buildUserMessage } from "../prompt.js";
 import { isQuotaStatus, withRetry } from "../retry.js";
+import { logEstimatedUsage } from "../rateLimitLog.js";
+
+// Gemini's free tier caps generateContent at 20 requests/day per model and
+// exposes no remaining-quota header - this is just what the 429 error text
+// reports, used only for the estimated-usage log line below.
+const FREE_TIER_DAILY_CAP = 20;
 
 const MODEL = process.env.GEMINI_MODEL ?? "gemini-flash-latest";
 
@@ -35,6 +41,7 @@ export function createGeminiProvider(): LLMProvider {
 
       try {
         return await withRetry("gemini", async () => {
+          logEstimatedUsage("gemini", FREE_TIER_DAILY_CAP);
           const response = await ai.models.generateContent({
             model: MODEL,
             contents: [{ role: "user", parts: [{ text: buildUserMessage(email) }] }],
