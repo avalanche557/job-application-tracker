@@ -1,4 +1,4 @@
-import type { ExtractionResult } from "./gemini.js";
+import type { ExtractionResult } from "./llm/types.js";
 
 // Confident regex-based classification, tried before spending an LLM call.
 // Returns null when the email doesn't clearly match a known pattern - the

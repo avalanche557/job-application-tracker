@@ -144,7 +144,7 @@ export function SettingsPage() {
                       </p>
                       {summary.stoppedEarly === "quota_exceeded" && (
                         <p className="mt-1.5 font-mono text-[11.5px] text-glow-ink">
-                          Gemini quota ran out partway through — {summary.skippedQuotaExhausted} email
+                          AI quota ran out partway through — {summary.skippedQuotaExhausted} email
                           {summary.skippedQuotaExhausted === 1 ? "" : "s"} that needed AI were skipped and will be
                           retried on the next sync.
                         </p>

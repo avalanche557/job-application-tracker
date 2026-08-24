@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma.js";
 import { listCandidateMessageIds, fetchMessage } from "../lib/gmailClient.js";
-import { extractJobApplicationInfo, isQuotaExceededError, type ExtractionResult } from "../lib/gemini.js";
+import { extractJobApplicationInfo, AllProvidersExhaustedError } from "../lib/llm/router.js";
+import type { ExtractionResult } from "../lib/llm/types.js";
 import { classifyWithRegex } from "../lib/emailClassifier.js";
 import {
   createApplication,
@@ -54,11 +55,12 @@ export async function syncEmailAccount(
   // misclassified.
   const messageIds = await listCandidateMessageIds(account.refreshToken, force ? null : account.lastSyncedAt);
 
-  // Once Gemini's quota is exhausted, regex-resolvable messages can still be
-  // processed for free - only messages that actually need the LLM get
-  // skipped (and left unprocessed, so a later sync retries them once quota
-  // resets, rather than wasting a doomed API call on each one now).
-  let geminiQuotaExhausted = false;
+  // Once every configured LLM provider's quota is exhausted, regex-resolvable
+  // messages can still be processed for free - only messages that actually
+  // need the LLM get skipped (and left unprocessed, so a later sync retries
+  // them once quota resets, rather than wasting a doomed API call on each one
+  // now).
+  let llmExhausted = false;
 
   for (const gmailMessageId of messageIds) {
     summary.scanned++;
@@ -86,7 +88,7 @@ export async function syncEmailAccount(
       if (regexResult && !regexResult.isJobApplicationRelated) {
         extraction = regexResult;
         summary.resolvedByRegex++;
-      } else if (geminiQuotaExhausted) {
+      } else if (llmExhausted) {
         if (regexResult) {
           extraction = regexResult;
           summary.resolvedByRegex++;
@@ -103,8 +105,8 @@ export async function syncEmailAccount(
           });
           summary.resolvedByLlm++;
         } catch (err) {
-          if (isQuotaExceededError(err)) {
-            geminiQuotaExhausted = true;
+          if (err instanceof AllProvidersExhaustedError) {
+            llmExhausted = true;
             summary.stoppedEarly = "quota_exceeded";
             if (regexResult) {
               extraction = regexResult;
