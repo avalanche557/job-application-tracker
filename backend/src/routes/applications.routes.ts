@@ -22,6 +22,8 @@ const listQuerySchema = z.object({
     .transform((v) => (v === undefined ? undefined : v === "true")),
   sortBy: z.enum(["dateApplied", "updatedAt", "companyName", "jobTitle", "status"]).optional(),
   order: z.enum(["asc", "desc"]).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 router.get("/", async (req, res) => {
@@ -30,8 +32,8 @@ router.get("/", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues[0].message });
     return;
   }
-  const applications = await listApplications(req.userId!, parsed.data);
-  res.json(applications);
+  const result = await listApplications(req.userId!, parsed.data);
+  res.json(result);
 });
 
 router.get("/:id", async (req, res) => {

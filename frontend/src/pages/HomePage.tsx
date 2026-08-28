@@ -7,7 +7,15 @@ import { StatusBadge } from "../components/StatusBadge";
 
 type SortBy = "dateApplied" | "updatedAt" | "companyName" | "jobTitle" | "status";
 
+type ApplicationsPage = {
+  applications: JobApplication[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 const STATUS_OPTIONS: ApplicationStatus[] = ["APPLIED", "INTERVIEWING", "OFFER", "REJECTED", "GHOSTED"];
+const PAGE_SIZE = 20;
 
 export function HomePage() {
   const [search, setSearch] = useState("");
@@ -16,11 +24,16 @@ export function HomePage() {
   const [needsReviewOnly, setNeedsReviewOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("updatedAt");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(timer);
   }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, status, needsReviewOnly, sortBy, order]);
 
   const params = new URLSearchParams();
   if (debouncedSearch) params.set("q", debouncedSearch);
@@ -28,11 +41,16 @@ export function HomePage() {
   if (needsReviewOnly) params.set("needsReview", "true");
   params.set("sortBy", sortBy);
   params.set("order", order);
+  params.set("page", String(page));
+  params.set("pageSize", String(PAGE_SIZE));
 
-  const { data: applications, isLoading, error } = useQuery({
-    queryKey: ["applications", debouncedSearch, status, needsReviewOnly, sortBy, order],
-    queryFn: () => api.get<JobApplication[]>(`/applications?${params.toString()}`),
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["applications", debouncedSearch, status, needsReviewOnly, sortBy, order, page],
+    queryFn: () => api.get<ApplicationsPage>(`/applications?${params.toString()}`),
   });
+
+  const applications = data?.applications;
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
   return (
     <div>
@@ -40,7 +58,7 @@ export function HomePage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-ink">Applications</h1>
           <p className="mt-1 font-mono text-[13px] text-ink-soft">
-            {applications ? `${applications.length} tracked` : " "}
+            {data ? `${data.total} tracked` : " "}
           </p>
         </div>
       </div>
@@ -180,6 +198,28 @@ export function HomePage() {
               </tbody>
             </table>
           </div>
+
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between font-mono text-[13px] text-ink-soft">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="btn px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                ← Prev
+              </button>
+              <span>
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="btn px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

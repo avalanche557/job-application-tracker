@@ -7,18 +7,31 @@ export type ListFilters = {
   needsReview?: boolean;
   sortBy?: "dateApplied" | "updatedAt" | "companyName" | "jobTitle" | "status";
   order?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
 };
 
-export function listApplications(userId: string, filters: ListFilters) {
-  return prisma.jobApplication.findMany({
-    where: {
-      userId,
-      status: filters.status,
-      needsReview: filters.needsReview,
-      companyName: filters.q ? { contains: filters.q, mode: "insensitive" } : undefined,
-    },
-    orderBy: { [filters.sortBy ?? "dateApplied"]: filters.order ?? "desc" },
-  });
+export async function listApplications(userId: string, filters: ListFilters) {
+  const where = {
+    userId,
+    status: filters.status,
+    needsReview: filters.needsReview,
+    companyName: filters.q ? { contains: filters.q, mode: "insensitive" as const } : undefined,
+  };
+  const page = filters.page ?? 1;
+  const pageSize = filters.pageSize ?? 20;
+
+  const [applications, total] = await Promise.all([
+    prisma.jobApplication.findMany({
+      where,
+      orderBy: { [filters.sortBy ?? "dateApplied"]: filters.order ?? "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.jobApplication.count({ where }),
+  ]);
+
+  return { applications, total, page, pageSize };
 }
 
 export function getApplication(userId: string, id: string) {
