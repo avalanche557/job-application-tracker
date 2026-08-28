@@ -5,7 +5,7 @@ import { api } from "../lib/api";
 import type { ApplicationStatus, JobApplication } from "../lib/types";
 import { StatusBadge } from "../components/StatusBadge";
 
-type SortBy = "dateApplied" | "companyName" | "jobTitle" | "status";
+type SortBy = "dateApplied" | "updatedAt" | "companyName" | "jobTitle" | "status";
 
 const STATUS_OPTIONS: ApplicationStatus[] = ["APPLIED", "INTERVIEWING", "OFFER", "REJECTED", "GHOSTED"];
 
@@ -14,7 +14,7 @@ export function HomePage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<ApplicationStatus | "">("");
   const [needsReviewOnly, setNeedsReviewOnly] = useState(false);
-  const [sortBy, setSortBy] = useState<SortBy>("dateApplied");
+  const [sortBy, setSortBy] = useState<SortBy>("updatedAt");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
@@ -83,6 +83,7 @@ export function HomePage() {
             onChange={(e) => setSortBy(e.target.value as SortBy)}
             className="input flex-1 py-1.5 sm:w-auto sm:flex-none"
           >
+            <option value="updatedAt">Sort: Last updated</option>
             <option value="dateApplied">Sort: Date applied</option>
             <option value="companyName">Sort: Company</option>
             <option value="jobTitle">Sort: Job title</option>

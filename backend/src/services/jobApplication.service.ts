@@ -5,7 +5,7 @@ export type ListFilters = {
   q?: string;
   status?: ApplicationStatus;
   needsReview?: boolean;
-  sortBy?: "dateApplied" | "companyName" | "jobTitle" | "status";
+  sortBy?: "dateApplied" | "updatedAt" | "companyName" | "jobTitle" | "status";
   order?: "asc" | "desc";
 };
 

@@ -20,7 +20,7 @@ const listQuerySchema = z.object({
     .enum(["true", "false"])
     .optional()
     .transform((v) => (v === undefined ? undefined : v === "true")),
-  sortBy: z.enum(["dateApplied", "companyName", "jobTitle", "status"]).optional(),
+  sortBy: z.enum(["dateApplied", "updatedAt", "companyName", "jobTitle", "status"]).optional(),
   order: z.enum(["asc", "desc"]).optional(),
 });
 
