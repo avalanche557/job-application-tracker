@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { useState } from "react";
-import { api, API_URL } from "../lib/api";
+import { api, API_URL, ApiError } from "../lib/api";
 import type { EmailAccount } from "../lib/types";
 
 const GMAIL_STATUS_MESSAGES: Record<string, { text: string; tone: "success" | "error" }> = {
@@ -28,6 +28,7 @@ export function SettingsPage() {
   const queryClient = useQueryClient();
   const gmailStatus = searchParams.get("gmail");
   const [syncSummaries, setSyncSummaries] = useState<Record<string, SyncSummary>>({});
+  const [syncErrors, setSyncErrors] = useState<Record<string, string>>({});
 
   const { data: accounts, isLoading } = useQuery({
     queryKey: ["email-accounts"],
@@ -42,10 +43,20 @@ export function SettingsPage() {
   const syncMutation = useMutation({
     mutationFn: ({ id, force }: { id: string; force?: boolean }) =>
       api.post<SyncSummary>(`/email-accounts/${id}/sync${force ? "?force=true" : ""}`),
+    onMutate: ({ id }) => {
+      setSyncErrors((prev) => {
+        const { [id]: _removed, ...rest } = prev;
+        return rest;
+      });
+    },
     onSuccess: (summary, { id }) => {
       setSyncSummaries((prev) => ({ ...prev, [id]: summary }));
       queryClient.invalidateQueries({ queryKey: ["email-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["applications"] });
+    },
+    onError: (err, { id }) => {
+      const message = err instanceof ApiError ? err.message : "Sync failed. Please try again.";
+      setSyncErrors((prev) => ({ ...prev, [id]: message }));
     },
   });
 
@@ -95,6 +106,7 @@ export function SettingsPage() {
           <ul className="space-y-3">
             {accounts.map((account) => {
               const summary = syncSummaries[account.id];
+              const syncError = syncErrors[account.id];
               const isSyncingThis = syncMutation.isPending && syncMutation.variables?.id === account.id;
               return (
                 <li key={account.id} className="rounded-[6px] border border-line px-5 py-4 text-sm">
@@ -132,6 +144,11 @@ export function SettingsPage() {
                       </button>
                     </div>
                   </div>
+                  {syncError && (
+                    <p className="mt-3 border-t border-line pt-3 font-mono text-[11.5px] text-rust-ink">
+                      {syncError}
+                    </p>
+                  )}
                   {summary && (
                     <>
                       <p className="mt-3 border-t border-line pt-3 font-mono text-[11.5px] text-ink-soft">

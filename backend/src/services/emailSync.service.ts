@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma.js";
-import { listCandidateMessageIds, fetchMessage } from "../lib/gmailClient.js";
+import { listCandidateMessageIds, fetchMessage, GmailAuthExpiredError } from "../lib/gmailClient.js";
 import { extractJobApplicationInfo, AllProvidersExhaustedError } from "../lib/llm/router.js";
 import type { ExtractionResult } from "../lib/llm/types.js";
 import { classifyWithRegex } from "../lib/emailClassifier.js";
@@ -173,6 +173,7 @@ export async function syncEmailAccount(
         },
       });
     } catch (err) {
+      if (err instanceof GmailAuthExpiredError) throw err;
       console.error(`Failed to process Gmail message ${gmailMessageId}:`, err);
       summary.failed++;
     }

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { listEmailAccounts, deleteEmailAccount } from "../services/emailAccount.service.js";
 import { syncEmailAccount } from "../services/emailSync.service.js";
+import { GmailAuthExpiredError } from "../lib/gmailClient.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -19,6 +20,10 @@ router.post("/:id/sync", async (req, res) => {
   } catch (err) {
     if (err instanceof Error && err.message === "Email account not found") {
       res.status(404).json({ error: err.message });
+      return;
+    }
+    if (err instanceof GmailAuthExpiredError) {
+      res.status(409).json({ error: "Gmail connection expired. Please disconnect and reconnect this account." });
       return;
     }
     console.error("Email sync failed:", err);

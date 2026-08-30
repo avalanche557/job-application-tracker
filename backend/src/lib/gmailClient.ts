@@ -22,10 +22,34 @@ export type GmailMessage = {
   bodyText: string;
 };
 
+// Thrown when Google rejects the stored refresh token outright (revoked, or
+// expired - test-mode OAuth consent grants expire after 7 days). No amount of
+// retrying fixes this; the user has to reconnect the account.
+export class GmailAuthExpiredError extends Error {
+  constructor() {
+    super("Gmail connection has expired and needs to be reconnected");
+    this.name = "GmailAuthExpiredError";
+  }
+}
+
+function isInvalidGrantError(err: unknown): boolean {
+  const data = (err as { response?: { data?: { error?: string } } })?.response?.data;
+  return data?.error === "invalid_grant";
+}
+
 function buildAuthedClient(refreshToken: string) {
   const client = createOAuthClient();
   client.setCredentials({ refresh_token: refreshToken });
   return google.gmail({ version: "v1", auth: client });
+}
+
+async function withAuthErrorHandling<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (isInvalidGrantError(err)) throw new GmailAuthExpiredError();
+    throw err;
+  }
 }
 
 function decodeBase64Url(data: string): string {
@@ -80,44 +104,48 @@ function header(headers: { name?: string | null; value?: string | null }[] | und
 // overlap, see INCREMENTAL_OVERLAP_MS) instead of re-listing the full
 // window on every run. First-ever sync (no `since`) scans the last 3 weeks.
 export async function listCandidateMessageIds(refreshToken: string, since?: Date | null): Promise<string[]> {
-  const gmail = buildAuthedClient(refreshToken);
-  const ids: string[] = [];
-  let pageToken: string | undefined;
+  return withAuthErrorHandling(async () => {
+    const gmail = buildAuthedClient(refreshToken);
+    const ids: string[] = [];
+    let pageToken: string | undefined;
 
-  const query = since
-    ? `${BASE_SEARCH_QUERY} after:${Math.floor((since.getTime() - INCREMENTAL_OVERLAP_MS) / 1000)}`
-    : `${BASE_SEARCH_QUERY} newer_than:21d`;
+    const query = since
+      ? `${BASE_SEARCH_QUERY} after:${Math.floor((since.getTime() - INCREMENTAL_OVERLAP_MS) / 1000)}`
+      : `${BASE_SEARCH_QUERY} newer_than:21d`;
 
-  do {
-    const { data } = await gmail.users.messages.list({
-      userId: "me",
-      q: query,
-      maxResults: 50,
-      pageToken,
-    });
-    ids.push(...(data.messages ?? []).map((m) => m.id!));
-    pageToken = data.nextPageToken ?? undefined;
-  } while (pageToken && ids.length < 200); // hard cap per sync run
+    do {
+      const { data } = await gmail.users.messages.list({
+        userId: "me",
+        q: query,
+        maxResults: 50,
+        pageToken,
+      });
+      ids.push(...(data.messages ?? []).map((m) => m.id!));
+      pageToken = data.nextPageToken ?? undefined;
+    } while (pageToken && ids.length < 200); // hard cap per sync run
 
-  return ids;
+    return ids;
+  });
 }
 
 export async function fetchMessage(refreshToken: string, messageId: string): Promise<GmailMessage> {
-  const gmail = buildAuthedClient(refreshToken);
-  const { data } = await gmail.users.messages.get({
-    userId: "me",
-    id: messageId,
-    format: "full",
+  return withAuthErrorHandling(async () => {
+    const gmail = buildAuthedClient(refreshToken);
+    const { data } = await gmail.users.messages.get({
+      userId: "me",
+      id: messageId,
+      format: "full",
+    });
+
+    const headers = data.payload?.headers;
+    const bodyText = extractPlainText(data.payload).slice(0, 8000); // cap for LLM input
+
+    return {
+      id: messageId,
+      subject: header(headers, "Subject"),
+      from: header(headers, "From"),
+      receivedAt: data.internalDate ? new Date(Number(data.internalDate)) : null,
+      bodyText,
+    };
   });
-
-  const headers = data.payload?.headers;
-  const bodyText = extractPlainText(data.payload).slice(0, 8000); // cap for LLM input
-
-  return {
-    id: messageId,
-    subject: header(headers, "Subject"),
-    from: header(headers, "From"),
-    receivedAt: data.internalDate ? new Date(Number(data.internalDate)) : null,
-    bodyText,
-  };
 }
