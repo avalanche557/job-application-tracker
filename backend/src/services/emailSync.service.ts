@@ -12,6 +12,13 @@ import { getEmailAccountWithDecryptedToken, touchLastSynced } from "./emailAccou
 
 const CONFIDENCE_THRESHOLD = 0.5;
 
+export class EmailAccountDisconnectedError extends Error {
+  constructor() {
+    super("Account disconnected — reconnect Gmail to resume syncing");
+    this.name = "EmailAccountDisconnectedError";
+  }
+}
+
 export type SyncSummary = {
   scanned: number;
   created: number;
@@ -32,6 +39,7 @@ export async function syncEmailAccount(
 ): Promise<SyncSummary> {
   const account = await getEmailAccountWithDecryptedToken(userId, emailAccountId);
   if (!account) throw new Error("Email account not found");
+  if (account.disconnectedAt) throw new EmailAccountDisconnectedError();
 
   const force = options?.force ?? false;
 

@@ -44,4 +44,5 @@ export type EmailAccount = {
   email: string;
   createdAt: string;
   lastSyncedAt: string | null;
+  disconnectedAt: string | null;
 };

@@ -66,6 +66,7 @@ model EmailAccount {
   scope               String
   expiryDate          DateTime?
   lastSyncedAt        DateTime?
+  disconnectedAt      DateTime?
 
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt

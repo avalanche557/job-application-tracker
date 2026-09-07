@@ -4,7 +4,14 @@ import { encrypt, decrypt } from "../lib/crypto.js";
 export function listEmailAccounts(userId: string) {
   return prisma.emailAccount.findMany({
     where: { userId },
-    select: { id: true, provider: true, email: true, createdAt: true, lastSyncedAt: true },
+    select: {
+      id: true,
+      provider: true,
+      email: true,
+      createdAt: true,
+      lastSyncedAt: true,
+      disconnectedAt: true,
+    },
   });
 }
 
@@ -32,6 +39,7 @@ export async function upsertGmailAccount(
       encryptedRefreshToken: encrypt(data.refreshToken),
       scope: data.scope,
       expiryDate: data.expiryDate,
+      disconnectedAt: null,
     },
   });
 }
@@ -46,10 +54,23 @@ export function touchLastSynced(id: string) {
   return prisma.emailAccount.update({ where: { id }, data: { lastSyncedAt: new Date() } });
 }
 
+const DISCONNECT_GRACE_PERIOD_MS = 3 * 24 * 60 * 60 * 1000;
+
 export async function deleteEmailAccount(userId: string, id: string) {
   const existing = await prisma.emailAccount.findFirst({ where: { id, userId } });
   if (!existing) return false;
 
-  await prisma.emailAccount.delete({ where: { id } });
+  // Soft-disconnect: keep the row (and its RawEmail sync history / lastSyncedAt
+  // cursor) around so a reconnect within the grace period can resume
+  // incrementally instead of re-scanning from scratch.
+  await prisma.emailAccount.update({ where: { id }, data: { disconnectedAt: new Date() } });
   return true;
+}
+
+export async function purgeExpiredDisconnectedAccounts() {
+  const cutoff = new Date(Date.now() - DISCONNECT_GRACE_PERIOD_MS);
+  const { count } = await prisma.emailAccount.deleteMany({
+    where: { disconnectedAt: { lte: cutoff } },
+  });
+  return count;
 }

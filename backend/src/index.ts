@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth.routes.js";
 import applicationsRoutes from "./routes/applications.routes.js";
 import googleRoutes from "./routes/google.routes.js";
 import emailAccountsRoutes from "./routes/emailAccounts.routes.js";
+import { schedulePurgeDisconnectedAccounts } from "./jobs/purgeDisconnectedAccounts.job.js";
 
 const app = express();
 const port = process.env.PORT ?? 4000;
@@ -28,3 +29,5 @@ app.use("/email-accounts", emailAccountsRoutes);
 app.listen(port, () => {
   console.log(`Backend listening on http://localhost:${port}`);
 });
+
+schedulePurgeDisconnectedAccounts();

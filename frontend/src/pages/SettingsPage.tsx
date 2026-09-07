@@ -10,6 +10,14 @@ const GMAIL_STATUS_MESSAGES: Record<string, { text: string; tone: "success" | "e
   error: { text: "Something went wrong connecting Gmail. Please try again.", tone: "error" },
 };
 
+const DISCONNECT_GRACE_PERIOD_DAYS = 3;
+
+function daysUntilPurge(disconnectedAt: string): number {
+  const purgeAt = new Date(disconnectedAt).getTime() + DISCONNECT_GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000;
+  const daysLeft = Math.ceil((purgeAt - Date.now()) / (24 * 60 * 60 * 1000));
+  return Math.max(daysLeft, 0);
+}
+
 type SyncSummary = {
   scanned: number;
   created: number;
@@ -108,6 +116,7 @@ export function SettingsPage() {
               const summary = syncSummaries[account.id];
               const syncError = syncErrors[account.id];
               const isSyncingThis = syncMutation.isPending && syncMutation.variables?.id === account.id;
+              const isDisconnected = account.disconnectedAt !== null;
               return (
                 <li key={account.id} className="rounded-[6px] border border-line px-5 py-4 text-sm">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -118,30 +127,44 @@ export function SettingsPage() {
                           ? `Last synced ${new Date(account.lastSyncedAt).toLocaleString()}`
                           : "Not synced yet"}
                       </p>
+                      {isDisconnected && account.disconnectedAt && (
+                        <p className="mt-0.5 font-mono text-[12px] text-rust-ink">
+                          Disconnected — data will be deleted in {daysUntilPurge(account.disconnectedAt)} day
+                          {daysUntilPurge(account.disconnectedAt) === 1 ? "" : "s"} unless you reconnect
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        onClick={() => syncMutation.mutate({ id: account.id })}
-                        disabled={isSyncingThis}
-                        className="btn px-3 py-1.5"
-                      >
-                        {isSyncingThis ? "Syncing…" : "Sync now"}
-                      </button>
-                      <button
-                        onClick={() => syncMutation.mutate({ id: account.id, force: true })}
-                        disabled={isSyncingThis}
-                        title="Re-scan the last 3 weeks of email, including messages already processed"
-                        className="btn px-3 py-1.5"
-                      >
-                        {isSyncingThis ? "Syncing…" : "Resync (3 weeks)"}
-                      </button>
-                      <button
-                        onClick={() => disconnectMutation.mutate(account.id)}
-                        disabled={disconnectMutation.isPending}
-                        className="btn btn-danger px-3 py-1.5"
-                      >
-                        Disconnect
-                      </button>
+                      {isDisconnected ? (
+                        <a href={`${API_URL}/auth/google`} className="btn btn-primary px-3 py-1.5">
+                          Reconnect
+                        </a>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => syncMutation.mutate({ id: account.id })}
+                            disabled={isSyncingThis}
+                            className="btn px-3 py-1.5"
+                          >
+                            {isSyncingThis ? "Syncing…" : "Sync now"}
+                          </button>
+                          <button
+                            onClick={() => syncMutation.mutate({ id: account.id, force: true })}
+                            disabled={isSyncingThis}
+                            title="Re-scan the last 3 weeks of email, including messages already processed"
+                            className="btn px-3 py-1.5"
+                          >
+                            {isSyncingThis ? "Syncing…" : "Resync (3 weeks)"}
+                          </button>
+                          <button
+                            onClick={() => disconnectMutation.mutate(account.id)}
+                            disabled={disconnectMutation.isPending}
+                            className="btn btn-danger px-3 py-1.5"
+                          >
+                            Disconnect
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                   {syncError && (
