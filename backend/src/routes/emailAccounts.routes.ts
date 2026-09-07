@@ -8,8 +8,13 @@ const router = Router();
 router.use(requireAuth);
 
 router.get("/", async (req, res) => {
-  const accounts = await listEmailAccounts(req.userId!);
-  res.json(accounts);
+  try {
+    const accounts = await listEmailAccounts(req.userId!);
+    res.json(accounts);
+  } catch (err) {
+    console.error("Failed to list email accounts:", err);
+    res.status(500).json({ error: "Failed to load email accounts" });
+  }
 });
 
 router.post("/:id/sync", async (req, res) => {
@@ -36,12 +41,17 @@ router.post("/:id/sync", async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
-  const deleted = await deleteEmailAccount(req.userId!, req.params.id);
-  if (!deleted) {
-    res.status(404).json({ error: "Email account not found" });
-    return;
+  try {
+    const deleted = await deleteEmailAccount(req.userId!, req.params.id);
+    if (!deleted) {
+      res.status(404).json({ error: "Email account not found" });
+      return;
+    }
+    res.status(204).send();
+  } catch (err) {
+    console.error("Failed to disconnect email account:", err);
+    res.status(500).json({ error: "Failed to disconnect email account" });
   }
-  res.status(204).send();
 });
 
 export default router;
