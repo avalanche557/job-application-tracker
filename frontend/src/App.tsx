@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ApiError } from "./lib/api";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Layout } from "./components/Layout";
@@ -10,7 +11,22 @@ import { DetailPage } from "./pages/DetailPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Client errors (4xx, including 429) won't fix themselves on retry - only
+      // retry transient failures (network errors, 5xx), and only a couple of
+      // times, so a backend blip doesn't turn into a request flood that trips
+      // the host's own rate limiting.
+      retry: (failureCount, error) => {
+        if (error instanceof ApiError && error.status >= 400 && error.status < 500) return false;
+        return failureCount < 2;
+      },
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function App() {
   return (
